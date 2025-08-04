@@ -1,272 +1,310 @@
-import React from "react";
-import {
-  StyleSheet,
-  ScrollView,
-  Text,
-  View,
-  TouchableOpacity,
-  ImageBackground,
-} from "react-native";
+import React, { useState, useCallback } from "react";
+import { StyleSheet, Text, View, TouchableOpacity, Modal } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { BlurView } from "expo-blur";
-import { Feather, AntDesign } from "@expo/vector-icons";
+import {
+  Feather,
+  FontAwesome5,
+  MaterialCommunityIcons,
+} from "@expo/vector-icons";
+import { Link, Href } from "expo-router";
+import { Calendar, DateData } from "react-native-calendars";
+import DraggableFlatList, {
+  RenderItemParams,
+  ScaleDecorator,
+} from "react-native-draggable-flatlist";
 
-// JCRing 앱의 핵심인 블러 카드 컴포넌트
-const GlassCard = ({
-  children,
-  style,
-}: {
-  children: React.ReactNode;
-  style?: object;
-}) => (
-  <BlurView intensity={40} tint="dark" style={[styles.card, style]}>
-    {children}
-  </BlurView>
+// --- 타입 정의 ---
+type CardProps = {
+  icon: any;
+  label: string;
+  value: string;
+  unit: string;
+  href: Href;
+  description?: string;
+  iconProvider?: "FontAwesome5" | "MaterialCommunity";
+};
+
+type CardDataItem = {
+  key: string;
+  props: CardProps;
+};
+
+// --- 단일 카드 컴포넌트로 통합 ---
+const MetricCard = ({
+  icon,
+  label,
+  value,
+  unit,
+  href,
+  description,
+  iconProvider = "FontAwesome5",
+}: CardProps) => (
+  <Link href={href} asChild>
+    <TouchableOpacity style={styles.card}>
+      <View style={styles.cardHeader}>
+        {iconProvider === "MaterialCommunity" ? (
+          <MaterialCommunityIcons name={icon} size={20} color="#5A9DFF" />
+        ) : (
+          <FontAwesome5 name={icon} size={20} color="#5A9DFF" />
+        )}
+        <Text style={styles.cardTitle}>{label}</Text>
+      </View>
+      <View style={styles.cardContent}>
+        <Text style={styles.largeValue}>
+          {value} <Text style={styles.unit}>{unit}</Text>
+        </Text>
+        {description && <Text style={styles.subValue}>{description}</Text>}
+      </View>
+    </TouchableOpacity>
+  </Link>
 );
 
-// 날짜 선택 컴포넌트
-const DateScroller = () => (
-  <View style={styles.dateScroller}>
-    <Text style={styles.dateText}>월요일, 07/24</Text>
-    <Text style={[styles.dateText, styles.activeDate]}>화요일, 07/25</Text>
-    <Text style={styles.dateText}>수요일, 07/26</Text>
-  </View>
-);
-
-// 수면 그래프 시뮬레이션
-const SleepChart = () => (
-  <View style={styles.sleepChartContainer}>
-    {Array.from({ length: 40 }).map((_, i) => (
-      <View
-        key={i}
-        style={[
-          styles.sleepBar,
-          {
-            height: 10 + Math.random() * 25,
-            opacity: 0.5 + Math.random() * 0.5,
-          },
-        ]}
-      />
-    ))}
-  </View>
-);
-
+// --- 메인 홈 화면 컴포넌트 ---
 export default function HomeScreen() {
-  return (
-    <ImageBackground
-      source={{
-        uri: "https://images.unsplash.com/photo-1519681393784-d120267933ba",
-      }} // 멋진 배경 이미지
-      style={styles.backgroundImage}
-    >
-      <SafeAreaView style={styles.container}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          {/* 상단 헤더 */}
-          <View style={styles.header}>
-            <Text style={styles.logo}>JCRing</Text>
-            <View style={styles.headerIcons}>
-              <Feather name="refresh-cw" size={22} color="white" />
-              <AntDesign
-                name="plus"
-                size={26}
-                color="white"
-                style={{ marginLeft: 20 }}
-              />
-            </View>
-          </View>
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isCalendarVisible, setCalendarVisible] = useState(false);
+  const [isEditMode, setEditMode] = useState(false);
 
-          {/* 날짜 스크롤러 */}
-          <DateScroller />
+  const initialCardData: CardDataItem[] = [
+    {
+      key: "sleep",
+      props: {
+        icon: "moon",
+        label: "수면",
+        value: "7.8",
+        unit: "시간",
+        description: "어젯밤 수면 점수는 85점입니다.",
+        href: "/health",
+      },
+    },
+    {
+      key: "exercise",
+      props: {
+        icon: "running",
+        label: "운동",
+        value: "450",
+        unit: "Kcal",
+        description: "오늘 52분 동안 활동했습니다.",
+        href: "/exericse",
+      },
+    },
+    {
+      key: "hr",
+      props: {
+        icon: "heartbeat",
+        label: "심박수",
+        value: "68",
+        unit: "bpm",
+        description: "안정 시 심박수",
+        href: "/health",
+      },
+    },
+    {
+      key: "spo2",
+      props: {
+        icon: "tint",
+        label: "SpO2",
+        value: "98",
+        unit: "%",
+        description: "평균 혈중 산소 포화도",
+        href: "/health",
+      },
+    },
+    {
+      key: "stress",
+      props: {
+        icon: "brain",
+        label: "스트레스",
+        value: "25",
+        unit: "낮음",
+        description: "현재 스트레스 수준",
+        href: "/health",
+      },
+    },
+  ];
 
-          {/* 건강 지수 카드 */}
-          <GlassCard>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text style={styles.cardTitle}>건강 지수</Text>
-              <Feather name="chevron-right" size={22} color="#A5C9FF" />
-            </View>
-            <Text
-              style={{
-                color: "#A5C9FF",
-                fontSize: 18,
-                marginTop: 10,
-                fontFamily: "SpaceMono",
-              }}
-            >
-              좋음
-            </Text>
-            {/* 여기에 그래프 이미지를 넣거나, 그래프 라이브러리를 사용합니다. */}
-          </GlassCard>
+  const [cardData, setCardData] = useState(initialCardData);
 
-          {/* 수면 카드 */}
-          <GlassCard>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Text style={styles.cardTitle}>수면</Text>
-              <Feather name="chevron-right" size={22} color="#A5C9FF" />
-            </View>
-            <Text style={styles.hugeScore}>88</Text>
-            <Text
-              style={{
-                color: "#A5C9FF",
-                alignSelf: "center",
-                marginBottom: 20,
-                fontFamily: "SpaceMono",
-              }}
-            >
-              환상적
-            </Text>
-            <SleepChart />
-            <View style={styles.sleepMetrics}>
-              <Text style={styles.metricText}>7h 24m</Text>
-              <Text style={styles.metricText}>68 bpm</Text>
-              <Text style={styles.metricText}>97 %</Text>
-            </View>
-          </GlassCard>
+  const formattedDate = `${selectedDate.getFullYear()}.${(
+    selectedDate.getMonth() + 1
+  )
+    .toString()
+    .padStart(2, "0")}.${selectedDate.getDate().toString().padStart(2, "0")}`;
 
-          {/* 운동 카드 */}
-          <GlassCard style={{ alignItems: "center" }}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                width: "100%",
-              }}
-            >
-              <Text style={styles.cardTitle}>운동</Text>
-              <Feather name="chevron-right" size={22} color="#A5C9FF" />
-            </View>
-            {/* 운동 점수 링 시뮬레이션 */}
-            <View style={styles.ringContainer}>
-              <View style={styles.outerRing}>
-                <View style={styles.innerRing}>
-                  <Text style={styles.hugeScore}>86</Text>
-                </View>
+  const renderItem = useCallback(
+    ({ item, drag, isActive }: RenderItemParams<CardDataItem>) => {
+      return (
+        <ScaleDecorator>
+          <TouchableOpacity
+            style={{ opacity: isActive ? 0.7 : 1, marginBottom: 16 }}
+            onLongPress={drag}
+            disabled={!isEditMode}
+          >
+            {isEditMode && (
+              <View style={styles.dragHandle}>
+                <Feather name="menu" size={24} color="#8E8E93" />
               </View>
-            </View>
-          </GlassCard>
-        </ScrollView>
-      </SafeAreaView>
-    </ImageBackground>
+            )}
+            <MetricCard {...item.props} />
+          </TouchableOpacity>
+        </ScaleDecorator>
+      );
+    },
+    [isEditMode]
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Genie Ring</Text>
+        <View style={{ flexDirection: "row", alignItems: "center" }}>
+          <TouchableOpacity onPress={() => setCalendarVisible(true)}>
+            <Text style={styles.dateText}>{formattedDate}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setEditMode(!isEditMode)}
+            style={{ marginLeft: 16 }}
+          >
+            <Feather
+              name={isEditMode ? "check-square" : "edit"}
+              size={22}
+              color={isEditMode ? "#5A9DFF" : "#8E8E93"}
+            />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <DraggableFlatList
+        data={cardData}
+        onDragEnd={({ data }) => setCardData(data)}
+        keyExtractor={(item: CardDataItem) => item.key}
+        renderItem={renderItem}
+        contentContainerStyle={styles.scrollContent}
+      />
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isCalendarVisible}
+        onRequestClose={() => setCalendarVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalContainer}
+          activeOpacity={1}
+          onPress={() => setCalendarVisible(false)}
+        >
+          <View style={styles.calendarContainer}>
+            <Calendar
+              onDayPress={(day: DateData) => {
+                setSelectedDate(new Date(day.dateString));
+                setCalendarVisible(false);
+              }}
+              markedDates={{
+                [selectedDate.toISOString().split("T")[0]]: {
+                  selected: true,
+                  selectedColor: "#5A9DFF",
+                },
+              }}
+              theme={{
+                backgroundColor: "#1C1C1E",
+                calendarBackground: "#1C1C1E",
+                textSectionTitleColor: "#b6c1cd",
+                selectedDayBackgroundColor: "#5A9DFF",
+                selectedDayTextColor: "#ffffff",
+                todayTextColor: "#5A9DFF",
+                dayTextColor: "#d9e1e8",
+                textDisabledColor: "#333",
+                monthTextColor: "white",
+                arrowColor: "#5A9DFF",
+              }}
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)", // 배경 위에 어두운 오버레이를 추가하여 가독성 확보
-  },
-  scrollContent: {
-    paddingBottom: 100,
-  },
+  container: { flex: 1, backgroundColor: "#0A0A0A" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 24,
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
-  logo: {
-    color: "white",
-    fontSize: 24,
-    fontFamily: "SpaceMono", // 적용된 폰트
-  },
-  headerIcons: {
-    flexDirection: "row",
-  },
-  dateScroller: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    paddingHorizontal: 20,
-    marginBottom: 20,
+  headerTitle: {
+    color: "#EAEAEA",
+    fontSize: 28,
+    fontWeight: "bold",
+    fontFamily: "SpaceMono",
   },
   dateText: {
-    color: "#929292",
+    color: "#8E8E93",
     fontSize: 16,
     fontFamily: "SpaceMono",
   },
-  activeDate: {
-    color: "white",
-    fontWeight: "bold",
-    borderBottomColor: "white",
-    borderBottomWidth: 2,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 100,
   },
   card: {
-    marginHorizontal: 20,
-    borderRadius: 24,
+    backgroundColor: "#1C1C1E",
+    borderRadius: 20,
     padding: 20,
-    marginBottom: 20,
-    overflow: "hidden",
-    borderColor: "rgba(255, 255, 255, 0.2)",
-    borderWidth: 1,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   cardTitle: {
     color: "white",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  hugeScore: {
-    color: "white",
-    fontSize: 80,
-    fontWeight: "bold",
-    alignSelf: "center",
-    marginVertical: 10,
-    fontFamily: "SpaceMono",
-  },
-  sleepChartContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    height: 40,
-  },
-  sleepBar: {
-    width: 4,
-    backgroundColor: "white",
-    borderRadius: 2,
-  },
-  sleepMetrics: {
-    flexDirection: "row",
-    justifyContent: "space-around",
-    width: "100%",
-    marginTop: 20,
-  },
-  metricText: {
-    color: "white",
     fontSize: 18,
+    fontWeight: "bold",
+    marginLeft: 12,
+  },
+  cardContent: {
+    alignItems: "flex-start",
+    paddingTop: 16,
+  },
+  largeValue: {
+    color: "white",
+    fontSize: 36,
+    fontWeight: "bold",
     fontFamily: "SpaceMono",
   },
-  ringContainer: {
-    marginVertical: 20,
-    alignItems: "center",
-    justifyContent: "center",
+  unit: {
+    fontSize: 18,
+    color: "#8E8E93",
+    fontWeight: "normal",
+    marginLeft: 4,
   },
-  outerRing: {
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: "rgba(28, 28, 30, 0.7)",
-    justifyContent: "center",
-    alignItems: "center",
+  subValue: {
+    color: "#8E8E93",
+    fontSize: 15,
+    marginTop: 6,
   },
-  innerRing: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    backgroundColor: "rgba(0,0,0,0.5)",
+  dragHandle: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    zIndex: 10,
+    padding: 10,
+  },
+  modalContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.7)",
+  },
+  calendarContainer: {
+    backgroundColor: "#1C1C1E",
+    borderRadius: 20,
+    padding: 10,
+    width: "90%",
+    elevation: 5,
   },
 });
