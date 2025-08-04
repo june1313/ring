@@ -1,16 +1,14 @@
-/**
- * Learn more about light and dark modes:
- * https://docs.expo.dev/guides/color-schemes/
- */
+// hooks/useThemeColor.ts
+import { useColorScheme } from "react-native";
+import { Colors } from "@/constants/Colors";
 
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
-
+// keyof typeof Colors.light: Colors.light 객체의 모든 키('text', 'background', 'card' 등)를
+// 타입으로 사용하여, 이제 어떤 색상 이름이든 안전하게 받을 수 있습니다.
 export function useThemeColor(
   props: { light?: string; dark?: string },
-  colorName: keyof typeof Colors.light & keyof typeof Colors.dark
+  colorName: keyof typeof Colors.light
 ) {
-  const theme = useColorScheme() ?? 'light';
+  const theme = useColorScheme() ?? "light";
   const colorFromProps = props[theme];
 
   if (colorFromProps) {
