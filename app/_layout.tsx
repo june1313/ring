@@ -1,6 +1,6 @@
 // app/_layout.tsx
 
-import "react-native-gesture-handler"; // 가장 최상단에 이 코드를 추가해야 합니다.
+import "react-native-gesture-handler";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { Stack } from "expo-router";
 import { useFonts } from "expo-font";
@@ -12,6 +12,7 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+    // 당신이 사용하는 다른 폰트가 있다면 여기에 추가하십시오.
   });
 
   useEffect(() => {
@@ -25,10 +26,14 @@ export default function RootLayout() {
   }
 
   return (
-    // GestureHandlerRootView로 앱 전체를 감싸줍니다.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* 이곳이 유일한 해결책입니다.
+        <Stack> 바로 여기에 screenOptions={{ headerShown: false }} 를 추가하면
+        이 Stack에 속한 모든 자식 화면(tabs, modal, sleep-details, exercise-details 등)의
+        기본 헤더가 전부 사라집니다.
+      */}
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="modal" options={{ presentation: "modal" }} />
       </Stack>
     </GestureHandlerRootView>
