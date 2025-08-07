@@ -21,7 +21,7 @@ export type CardDataItem = {
   props: CardProps;
 };
 
-// 공통 색상 정의
+// [수정] 공통 색상 정의에 새로운 지표 색상 추가
 export const COLORS = {
   sleep: "#8A9BFF",
   exercise: "#50D6A3",
@@ -29,4 +29,8 @@ export const COLORS = {
   spo2: "#3ACCE1",
   stress: "#FFB86B",
   glucose: "#A061FF",
+  hrv: "#48C9B0", // HRV (청록색)
+  temp: "#F39C12", // 온도 (주황색)
+  pressure: "#5DADE2", // 압력 (하늘색)
+  vo2max: "#9B59B6", // VO2Max (보라색)
 };

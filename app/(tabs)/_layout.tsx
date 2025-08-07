@@ -80,14 +80,6 @@ export default function TabLayout() {
           tabBarActiveTintColor: COLORS.me, // 프로필 탭 활성 색상
         }}
       />
-
-      {/* edit-profile 탭은 숨김 처리 */}
-      <Tabs.Screen
-        name="edit-profile"
-        options={{
-          href: null,
-        }}
-      />
     </Tabs>
   );
 }

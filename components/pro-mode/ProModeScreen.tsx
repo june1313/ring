@@ -9,6 +9,7 @@ import { CardDataItem, COLORS } from "./types";
 export default function ProModeScreen() {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
+  // [수정] cardData에 누락된 모든 지표 추가
   const cardData = [
     {
       key: "sleep",
@@ -18,7 +19,7 @@ export default function ProModeScreen() {
         icon: "moon",
         title: "수면",
         color: COLORS.sleep,
-        href: "/sleep-details", // 수정
+        href: "/sleep-details",
       },
     },
     [
@@ -33,7 +34,7 @@ export default function ProModeScreen() {
           unit: "Kcal",
           status: "목표 달성",
           color: COLORS.exercise,
-          href: "/exercise-details", // 수정
+          href: "/exercise-details",
         },
       },
       {
@@ -47,7 +48,7 @@ export default function ProModeScreen() {
           unit: "bpm",
           status: "안정",
           color: COLORS.hr,
-          href: "/hr-details", // 수정
+          href: "/hr-details",
         },
       },
     ],
@@ -63,7 +64,7 @@ export default function ProModeScreen() {
           unit: "%",
           status: "좋음",
           color: COLORS.spo2,
-          href: "/spo2-details", // 수정
+          href: "/spo2-details",
         },
       },
       {
@@ -77,7 +78,7 @@ export default function ProModeScreen() {
           unit: "낮음",
           status: "안정",
           color: COLORS.stress,
-          href: "/stress-details", // 수정
+          href: "/stress-details",
         },
       },
     ],
@@ -94,13 +95,57 @@ export default function ProModeScreen() {
           unit: "mg/dL",
           status: "정상",
           color: COLORS.glucose,
-          href: "/glucose-details", // 수정
+          href: "/glucose-details",
+        },
+      },
+      {
+        key: "hrv",
+        type: "half",
+        component: MetricCard,
+        props: {
+          icon: "wave-square",
+          title: "HRV",
+          value: "58",
+          unit: "ms",
+          status: "좋음",
+          color: COLORS.hrv,
+          href: "/hrv-details", // 상세 페이지 링크 (추후 구현)
+        },
+      },
+    ],
+    [
+      {
+        key: "temp",
+        type: "half",
+        component: MetricCard,
+        props: {
+          icon: "thermometer-half",
+          title: "온도",
+          value: "36.6",
+          unit: "°C",
+          status: "정상",
+          color: COLORS.temp,
+          href: "/temp-details", // 상세 페이지 링크 (추후 구현)
+        },
+      },
+      {
+        key: "vo2max",
+        type: "half",
+        component: MetricCard,
+        props: {
+          icon: "lungs",
+          title: "VO2Max",
+          value: "45",
+          unit: "ml/kg/min",
+          status: "매우 좋음",
+          color: COLORS.vo2max,
+          href: "/vo2max-details", // 상세 페이지 링크 (추후 구현)
         },
       },
     ],
   ];
 
-  const renderItem = ({ item, index }) => {
+  const renderItem = ({ item, index }: { item: any; index: number }) => {
     if (Array.isArray(item)) {
       return (
         <View style={styles.halfRow}>
@@ -118,7 +163,11 @@ export default function ProModeScreen() {
             transition={{ type: "timing", duration: 700, delay: index * 150 }}
             style={styles.halfContainer}
           >
-            {item[1] ? <MetricCard {...item[1].props} /> : null}
+            {item[1] ? (
+              <MetricCard {...item[1].props} />
+            ) : (
+              <View style={styles.halfContainer} />
+            )}
           </MotiView>
         </View>
       );

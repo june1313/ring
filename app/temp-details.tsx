@@ -11,43 +11,39 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { LineChart, BarChart, ContributionGraph } from "react-native-chart-kit";
+import { LineChart, ContributionGraph } from "react-native-chart-kit";
 
 // --- 타입, 상수, 데이터 ---
 const COLORS = {
-  primary: "#3ACCE1",
+  primary: "#F39C12",
   text: "#EAEAEA",
   subText: "#BDBDBD",
   background: "#10141C",
   card: "#161B22",
   gridLine: "rgba(255, 255, 255, 0.1)",
-  normal: "rgba(58, 204, 225, 0.1)",
-  caution: "rgba(255, 184, 107, 0.1)",
-  danger: "rgba(255, 112, 141, 0.1)",
 };
 type Period = "일" | "주" | "월";
 
 const DAILY_DATA = {
-  timeline: Array.from({ length: 96 }, () => 95 + Math.random() * 5),
-  summary: { avg: 97.5, low: 94, dips: 3 },
-  log: Array.from({ length: 15 }, (_, i) => ({
-    time: `0${Math.floor(i / 3) + 2}:${String((i * 15) % 60).padStart(2, "0")}`,
-    value: (96 + Math.random() * 3).toFixed(1),
-  })),
+  variation: 0.2,
+  timeline: Array.from({ length: 96 }, () => Math.random() * 0.5 - 0.25),
 };
 const WEEKLY_DATA = {
-  dailyAvg: [97.5, 98.1, 96.9, 97.2, 98.0, 97.7, 97.4],
-  totalDips: 15,
-  avg: 97.5,
+  dailyVariations: [0.2, 0.1, -0.1, 0.3, 0.4, 0.2, 0.1],
+  avg: 0.17,
+  high: { value: 0.4, day: "목요일" },
+  stableDays: 5,
+  sleepCorrelation: 78,
 };
 const MONTHLY_DATA = {
   heatmapData: Array.from({ length: 31 }, (_, i) => ({
     date: `2025-08-${String(i + 1).padStart(2, "0")}`,
-    count: Math.floor(95 + Math.random() * 5),
+    count: Math.floor(Math.abs(Math.random() * 1.5 - 0.75) * 5),
   })),
-  weeklyTrend: [97.5, 97.2, 96.8, 97.8],
-  highestAvg: 98.2,
-  lowestAvg: 96.5,
+  weeklyTrend: [0.17, 0.25, -0.05, 0.1],
+  avg: 0.12,
+  mostVolatileWeek: "8월 2주차",
+  warningDays: 6,
 };
 const chartConfig = (color = COLORS.primary) => ({
   backgroundColor: COLORS.card,
@@ -98,58 +94,39 @@ const PeriodToggle = ({
 // --- 탭별 뷰 컴포넌트 ---
 const DailyView = () => (
   <>
-    <View style={styles.summaryGrid}>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>수면 중 평균</Text>
-        <Text style={styles.summaryValue}>
-          {DAILY_DATA.summary.avg.toFixed(1)}
-          <Text style={styles.summaryUnit}>%</Text>
-        </Text>
-      </View>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>최저</Text>
-        <Text style={styles.summaryValue}>
-          {DAILY_DATA.summary.low}
-          <Text style={styles.summaryUnit}>%</Text>
-        </Text>
-      </View>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>저하 횟수</Text>
-        <Text style={styles.summaryValue}>
-          {DAILY_DATA.summary.dips}
-          <Text style={styles.summaryUnit}>회</Text>
-        </Text>
-      </View>
+    <View style={styles.mainValueContainer}>
+      <Text
+        style={[
+          styles.mainValue,
+          { color: DAILY_DATA.variation >= 0 ? COLORS.primary : "#5DADE2" },
+        ]}
+      >
+        {DAILY_DATA.variation >= 0 ? "+" : ""}
+        {DAILY_DATA.variation.toFixed(1)}
+      </Text>
+      <Text style={styles.mainUnit}>°C</Text>
     </View>
+    <Text style={styles.subText}>어젯밤 평균과의 차이</Text>
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>수면 중 SpO2 타임라인</Text>
-      <View>
-        <LineChart
-          data={{
-            labels: ["23:00", "01:00", "03:00", "05:00", "07:00"],
-            datasets: [{ data: DAILY_DATA.timeline, strokeWidth: 2.5 }],
-          }}
-          width={Dimensions.get("window").width - 48}
-          height={220}
-          chartConfig={chartConfig()}
-          bezier
-          withHorizontalLabels={false}
-        />
-        <View style={StyleSheet.absoluteFill}>
-          <View style={{ flex: 1, backgroundColor: COLORS.normal }} />
-          <View style={{ flex: 0.2, backgroundColor: COLORS.caution }} />
-          <View style={{ flex: 0.1, backgroundColor: COLORS.danger }} />
-        </View>
-      </View>
+      <Text style={styles.sectionTitle}>야간 온도 변화 타임라인</Text>
+      <LineChart
+        data={{
+          labels: ["23:00", "01:00", "03:00", "05:00", "07:00"],
+          datasets: [{ data: DAILY_DATA.timeline, strokeWidth: 2 }],
+        }}
+        width={Dimensions.get("window").width - 48}
+        height={200}
+        chartConfig={chartConfig()}
+        bezier
+        withHorizontalLabels={true}
+        yAxisSuffix="°C"
+      />
     </View>
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>측정 기록 로그</Text>
-      {DAILY_DATA.log.map((item) => (
-        <View key={item.time} style={styles.logRow}>
-          <Text style={styles.logTime}>{item.time}</Text>
-          <Text style={styles.logValue}>{item.value}%</Text>
-        </View>
-      ))}
+    <View style={styles.insightCard}>
+      <Feather name="info" size={20} color={COLORS.primary} />
+      <Text style={styles.insightText}>
+        평소보다 높은 체온 변화가 감지되었습니다. 컨디션을 주의 깊게 살펴보세요.
+      </Text>
     </View>
   </>
 );
@@ -159,40 +136,74 @@ const WeeklyView = () => (
     <View style={styles.summaryGrid}>
       <View style={styles.summaryItem}>
         <Text style={styles.summaryLabel}>주간 평균</Text>
-        <Text style={styles.summaryValueLg}>
-          {WEEKLY_DATA.avg.toFixed(1)}
-          <Text style={styles.summaryUnit}>%</Text>
-        </Text>
+        <Text style={styles.summaryValue}>+{WEEKLY_DATA.avg.toFixed(2)}°C</Text>
       </View>
       <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>총 저하 횟수</Text>
-        <Text style={styles.summaryValueLg}>
-          {WEEKLY_DATA.totalDips}
-          <Text style={styles.summaryUnit}>회</Text>
+        <Text style={styles.summaryLabel}>최고 변화</Text>
+        <Text style={styles.summaryValue}>+{WEEKLY_DATA.high.value}°C</Text>
+        <Text style={styles.summarySubLabel}>{WEEKLY_DATA.high.day}</Text>
+      </View>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>안정적인 날</Text>
+        <Text style={styles.summaryValue}>
+          {WEEKLY_DATA.stableDays}
+          <Text style={{ fontSize: 16 }}>/7일</Text>
         </Text>
       </View>
     </View>
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>야간 평균 SpO2</Text>
-      <BarChart
-        data={{
-          labels: ["월", "화", "수", "목", "금", "토", "일"],
-          datasets: [{ data: WEEKLY_DATA.dailyAvg }],
-        }}
-        width={Dimensions.get("window").width - 48}
-        height={220}
-        fromZero={false}
-        yAxisSuffix="%"
-        chartConfig={chartConfig()}
-      />
+      <Text style={styles.sectionTitle}>일일 온도 변화</Text>
+      <View>
+        <View style={styles.rangeBand} />
+        <LineChart
+          data={{
+            labels: ["월", "화", "수", "목", "금", "토", "일"],
+            datasets: [{ data: WEEKLY_DATA.dailyVariations }],
+          }}
+          width={Dimensions.get("window").width - 48}
+          height={220}
+          yAxisSuffix="°C"
+          chartConfig={chartConfig()}
+          bezier
+          transparent
+        />
+      </View>
+    </View>
+    <View style={styles.insightCard}>
+      <FontAwesome5 name="bed" size={20} color={COLORS.subText} />
+      <Text style={styles.insightText}>
+        체온 변화가 가장 컸던 목요일의 수면 점수는{" "}
+        <Text style={{ color: "white", fontWeight: "bold" }}>
+          {WEEKLY_DATA.sleepCorrelation}점
+        </Text>
+        이었습니다.
+      </Text>
     </View>
   </>
 );
 
 const MonthlyView = () => (
   <>
+    <View style={styles.summaryGrid}>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>월간 평균</Text>
+        <Text style={styles.summaryValue}>
+          +{MONTHLY_DATA.avg.toFixed(2)}°C
+        </Text>
+      </View>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>'주의' 일수</Text>
+        <Text style={styles.summaryValue}>{MONTHLY_DATA.warningDays}일</Text>
+      </View>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>변동폭 최심 주</Text>
+        <Text style={[styles.summaryValue, { fontSize: 18 }]}>
+          {MONTHLY_DATA.mostVolatileWeek}
+        </Text>
+      </View>
+    </View>
     <View style={styles.card}>
-      <Text style={styles.sectionTitle}>월간 SpO2 히트맵</Text>
+      <Text style={styles.sectionTitle}>월간 온도 변화 히트맵</Text>
       <ContributionGraph
         values={MONTHLY_DATA.heatmapData}
         endDate={new Date("2025-08-31")}
@@ -201,7 +212,7 @@ const MonthlyView = () => (
         height={220}
         chartConfig={{
           ...chartConfig(),
-          color: (opacity = 1) => `rgba(58, 204, 225, ${opacity})`,
+          color: (opacity = 1) => `rgba(243, 156, 18, ${opacity})`,
         }}
       />
     </View>
@@ -214,32 +225,16 @@ const MonthlyView = () => (
         }}
         width={Dimensions.get("window").width - 48}
         height={220}
-        fromZero={false}
+        yAxisSuffix="°C"
         chartConfig={chartConfig()}
         bezier
       />
-    </View>
-    <View style={styles.summaryGrid}>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>월간 최고 평균</Text>
-        <Text style={styles.summaryValue}>
-          {MONTHLY_DATA.highestAvg.toFixed(1)}
-          <Text style={styles.summaryUnit}>%</Text>
-        </Text>
-      </View>
-      <View style={styles.summaryItem}>
-        <Text style={styles.summaryLabel}>월간 최저 평균</Text>
-        <Text style={styles.summaryValue}>
-          {MONTHLY_DATA.lowestAvg.toFixed(1)}
-          <Text style={styles.summaryUnit}>%</Text>
-        </Text>
-      </View>
     </View>
   </>
 );
 
 // --- 메인 컴포넌트 ---
-export default function Spo2DetailsScreen() {
+export default function TempDetailsScreen() {
   const [period, setPeriod] = useState<Period>("일");
   return (
     <LinearGradient
@@ -247,7 +242,7 @@ export default function Spo2DetailsScreen() {
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }}>
-        <DetailScreenHeader title="SpO2 분석" />
+        <DetailScreenHeader title="온도 분석" />
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <PeriodToggle period={period} setPeriod={setPeriod} />
           {period === "일" && <DailyView />}
@@ -273,24 +268,36 @@ const styles = StyleSheet.create({
   scrollContent: { padding: 16, paddingBottom: 100 },
   toggleContainer: {
     flexDirection: "row",
-    backgroundColor: "#161B22",
+    backgroundColor: COLORS.card,
     borderRadius: 20,
     alignSelf: "center",
-    marginBottom: 24,
+    padding: 4,
   },
-  toggleButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 24,
-    borderRadius: 20,
-  },
+  toggleButton: { paddingVertical: 8, paddingHorizontal: 24, borderRadius: 16 },
   activeToggleButton: { backgroundColor: COLORS.primary },
   toggleText: { color: COLORS.subText, fontSize: 16, fontWeight: "bold" },
   activeToggleText: { color: "white" },
+  mainValueContainer: {
+    alignItems: "center",
+    marginVertical: 24,
+    flexDirection: "row",
+    alignSelf: "center",
+  },
+  mainValue: { fontSize: 64, fontWeight: "bold" },
+  mainUnit: { fontSize: 24, color: COLORS.subText, marginLeft: 8 },
+  subText: {
+    fontSize: 16,
+    color: COLORS.subText,
+    marginTop: -20,
+    marginBottom: 24,
+    alignSelf: "center",
+  },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 24,
     padding: 12,
-    marginBottom: 24,
+    marginBottom: 16,
+    width: "100%",
     alignItems: "center",
   },
   sectionTitle: {
@@ -301,13 +308,28 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     paddingHorizontal: 12,
   },
+  insightCard: {
+    flexDirection: "row",
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: 16,
+    alignItems: "center",
+    width: "100%",
+  },
+  insightText: {
+    color: COLORS.text,
+    fontSize: 15,
+    marginLeft: 12,
+    flex: 1,
+    lineHeight: 22,
+  },
   summaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     backgroundColor: COLORS.card,
     borderRadius: 24,
     padding: 12,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   summaryItem: {
     flex: 1,
@@ -315,24 +337,18 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 16,
   },
-  summaryValue: { color: "white", fontSize: 28, fontWeight: "bold" },
-  summaryValueLg: { color: "white", fontSize: 32, fontWeight: "bold" },
+  summaryValue: { color: "white", fontSize: 22, fontWeight: "bold" },
   summaryLabel: { color: COLORS.subText, fontSize: 14, marginTop: 4 },
-  summaryUnit: { fontSize: 18, color: COLORS.subText },
-  logRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    width: "100%",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  summarySubLabel: { color: COLORS.subText, fontSize: 12, marginTop: 2 },
+  rangeBand: {
+    position: "absolute",
+    top: "45%",
+    bottom: "45%",
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(80, 214, 163, 0.1)",
+    borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.gridLine,
-  },
-  logTime: { color: COLORS.subText, fontFamily: "SpaceMono", fontSize: 15 },
-  logValue: {
-    color: COLORS.text,
-    fontFamily: "SpaceMono",
-    fontSize: 15,
-    fontWeight: "600",
+    borderColor: "rgba(80, 214, 163, 0.3)",
   },
 });

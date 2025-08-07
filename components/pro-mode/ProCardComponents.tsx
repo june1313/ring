@@ -8,7 +8,69 @@ import {
 import { Link } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { CardProps } from "./types";
+import Svg, { Circle, G } from "react-native-svg"; // [추가] SVG 컴포넌트
 
+// [새로운 컴포넌트] 수면 링 차트
+const SleepArcChart = () => {
+  const stages = [
+    { value: 0.2, color: "#5A9DFF" }, // 깊은
+    { value: 0.55, color: "#A5C9FF" }, // 얕은
+    { value: 0.25, color: "#D7BFFF" }, // REM
+  ];
+  const radius = 40;
+  const strokeWidth = 8;
+  const circumference = 2 * Math.PI * radius;
+  let accumulatedPercentage = 0;
+
+  return (
+    <View style={{ width: radius * 2 + 20, height: radius * 2 + 20 }}>
+      <Svg
+        height="100%"
+        width="100%"
+        viewBox={`0 0 ${radius * 2} ${radius * 2}`}
+      >
+        <G rotation="-90" origin={`${radius}, ${radius}`}>
+          {/* 배경 링 */}
+          <Circle
+            cx={radius}
+            cy={radius}
+            r={radius - strokeWidth / 2}
+            stroke="#333"
+            strokeWidth={strokeWidth}
+            fill="transparent"
+          />
+          {stages.map((stage, index) => {
+            const strokeDashoffset =
+              circumference - circumference * stage.value;
+            const rotation = accumulatedPercentage * 360;
+            accumulatedPercentage += stage.value;
+            return (
+              <G
+                key={index}
+                rotation={rotation}
+                origin={`${radius}, ${radius}`}
+              >
+                <Circle
+                  cx={radius}
+                  cy={radius}
+                  r={radius - strokeWidth / 2}
+                  stroke={stage.color}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </G>
+            );
+          })}
+        </G>
+      </Svg>
+    </View>
+  );
+};
+
+// [수정된 컴포넌트] 수면 카드
 export const SleepCard = ({ icon, title, color, href }: CardProps) => (
   <Link href={href} asChild>
     <TouchableOpacity style={styles.card}>
@@ -31,21 +93,8 @@ export const SleepCard = ({ icon, title, color, href }: CardProps) => (
           </Text>
           <Text style={styles.subValue}>수면 점수: 85점</Text>
         </View>
-        <View style={styles.timelineGraph}>
-          {Array.from({ length: 25 }).map((_, i) => (
-            <View
-              key={i}
-              style={[
-                styles.timelineBar,
-                {
-                  height: 10 + Math.random() * 40,
-                  backgroundColor: color,
-                  opacity: 0.6 + Math.random() * 0.4,
-                },
-              ]}
-            />
-          ))}
-        </View>
+        {/* [교체] 새로운 수면 링 차트 */}
+        <SleepArcChart />
       </View>
     </TouchableOpacity>
   </Link>

@@ -8,159 +8,242 @@ import {
   Dimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Feather } from "@expo/vector-icons";
+import { Feather, FontAwesome5 } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { LineChart } from "react-native-chart-kit";
+import {
+  LineChart,
+  BarChart,
+  ContributionGraph,
+  StackedBarChart,
+} from "react-native-chart-kit";
+import Svg, { Circle, G, Text as SvgText } from "react-native-svg";
 
+// --- 타입, 상수, 데이터 ---
 const COLORS = {
-  primary: "#A061FF", // 혈당의 메인 컬러
+  primary: "#A061FF",
   text: "#EAEAEA",
   subText: "#BDBDBD",
   background: "#10141C",
   card: "#161B22",
   gridLine: "rgba(255, 255, 255, 0.1)",
+  low: "#5DADE2",
+  inRange: "#50D6A3",
+  high: "#FFB86B",
 };
-
-// --- 타입 정의 추가 ---
 type Period = "일" | "주" | "월";
-type PeriodToggleProps = {
-  period: Period;
-  setPeriod: (period: Period) => void;
-};
 
-// 일/주/월 선택 토글 (props에 타입 적용)
-const PeriodToggle = ({ period, setPeriod }: PeriodToggleProps) => (
-  <View style={styles.toggleContainer}>
-    <TouchableOpacity
-      style={[
-        styles.toggleButton,
-        period === "일" && styles.activeToggleButton,
-      ]}
-      onPress={() => setPeriod("일")}
-    >
-      <Text
-        style={[styles.toggleText, period === "일" && styles.activeToggleText]}
-      >
-        일
-      </Text>
+const DAILY_DATA = {
+  timeline: Array.from({ length: 288 }, (_, i) => ({
+    time: `${String(Math.floor((i * 5) / 60)).padStart(2, "0")}:${String(
+      (i * 5) % 60
+    ).padStart(2, "0")}`,
+    value: 90 + Math.random() * 15,
+    event: i === 96 ? "breakfast" : i === 156 ? "lunch" : null,
+  })),
+  timeInRange: { low: 0.05, inRange: 0.85, high: 0.1 },
+  summary: { avg: 102, low: 75, high: 160, variability: 15.2 },
+};
+const WEEKLY_DATA = {
+  agpData: {
+    median: Array.from({ length: 288 }, (_, i) => 95 + Math.sin(i / 24) * 10),
+    iqr: Array.from({ length: 288 }, (_, i) => 15 + Math.cos(i / 24) * 5),
+  },
+  tirTrend: {
+    labels: ["월", "화", "수", "목", "금", "토", "일"],
+    data: [
+      [10, 80, 10],
+      [5, 85, 10],
+      [15, 70, 15],
+      [8, 82, 10],
+      [5, 90, 5],
+      [20, 65, 15],
+      [10, 75, 15],
+    ],
+    barColors: [COLORS.low, COLORS.inRange, COLORS.high],
+  },
+};
+const MONTHLY_DATA = {
+  weeklyTrend: [85, 82, 90, 88], // 주간 평균 TIR
+  heatmapData: Array.from({ length: 31 }, (_, i) => ({
+    date: `2025-08-${String(i + 1).padStart(2, "0")}`,
+    count: 80 + Math.floor(Math.random() * 15),
+  })),
+};
+const chartConfig = (color = COLORS.primary) => ({
+  backgroundColor: COLORS.card,
+  backgroundGradientFrom: COLORS.card,
+  backgroundGradientTo: COLORS.card,
+  decimalPlaces: 0,
+  color: (opacity = 1) => color,
+  labelColor: (opacity = 1) => `rgba(234, 234, 234, ${opacity})`,
+  propsForBackgroundLines: { stroke: COLORS.gridLine },
+});
+
+// --- 재사용 컴포넌트 ---
+const DetailScreenHeader = ({ title }: { title: string }) => (
+  <View style={styles.header}>
+    <TouchableOpacity onPress={() => router.back()}>
+      <Feather name="chevron-left" size={28} color={COLORS.text} />
     </TouchableOpacity>
-    <TouchableOpacity
-      style={[
-        styles.toggleButton,
-        period === "주" && styles.activeToggleButton,
-      ]}
-      onPress={() => setPeriod("주")}
-    >
-      <Text
-        style={[styles.toggleText, period === "주" && styles.activeToggleText]}
-      >
-        주
-      </Text>
-    </TouchableOpacity>
-    <TouchableOpacity
-      style={[
-        styles.toggleButton,
-        period === "월" && styles.activeToggleButton,
-      ]}
-      onPress={() => setPeriod("월")}
-    >
-      <Text
-        style={[styles.toggleText, period === "월" && styles.activeToggleText]}
-      >
-        월
-      </Text>
+    <Text style={styles.headerTitle}>{title}</Text>
+    <TouchableOpacity>
+      <Feather name="help-circle" size={24} color={COLORS.text} />
     </TouchableOpacity>
   </View>
 );
+const PeriodToggle = ({
+  period,
+  setPeriod,
+}: {
+  period: Period;
+  setPeriod: (p: Period) => void;
+}) => (
+  <View style={styles.toggleContainer}>
+    {(["일", "주", "월"] as Period[]).map((p) => (
+      <TouchableOpacity
+        key={p}
+        style={[styles.toggleButton, period === p && styles.activeToggleButton]}
+        onPress={() => setPeriod(p)}
+      >
+        <Text
+          style={[styles.toggleText, period === p && styles.activeToggleText]}
+        >
+          {p}
+        </Text>
+      </TouchableOpacity>
+    ))}
+  </View>
+);
+const TimeInRangesChart = ({ data }) => {
+  /* ... 이전 답변의 SleepDonutChart와 유사한 도넛 차트 구현 ... */
+};
 
+// --- 탭별 뷰 컴포넌트 ---
+const DailyView = () => (
+  <>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>Time in Range (TIR)</Text>
+      {/* TimeInRangesChart 컴포넌트가 여기에 들어옵니다. */}
+      <Text style={{ color: "white", padding: 20 }}>
+        Time in Range 도넛 차트
+      </Text>
+    </View>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>24시간 혈당 그래프</Text>
+      <LineChart
+        data={{ datasets: [{ data: DAILY_DATA.timeline.map((d) => d.value) }] }}
+        width={Dimensions.get("window").width - 48}
+        height={220}
+        chartConfig={chartConfig()}
+        bezier
+      />
+    </View>
+    <View style={styles.summaryGrid}>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>평균</Text>
+        <Text style={styles.summaryValue}>{DAILY_DATA.summary.avg}</Text>
+      </View>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>최고/최저</Text>
+        <Text style={styles.summaryValue}>
+          {DAILY_DATA.summary.high}/{DAILY_DATA.summary.low}
+        </Text>
+      </View>
+      <View style={styles.summaryItem}>
+        <Text style={styles.summaryLabel}>변동성</Text>
+        <Text style={styles.summaryValue}>
+          {DAILY_DATA.summary.variability.toFixed(1)}
+        </Text>
+      </View>
+    </View>
+  </>
+);
+
+const WeeklyView = () => (
+  <>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>AGP (Ambulatory Glucose Profile)</Text>
+      <LineChart
+        data={{ datasets: [{ data: WEEKLY_DATA.agpData.median }] }}
+        width={Dimensions.get("window").width - 48}
+        height={220}
+        chartConfig={chartConfig()}
+        bezier
+      />
+      <Text style={styles.chartSubtitle}>
+        지난 7일간의 평균 혈당 패턴입니다.
+      </Text>
+    </View>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>일별 Time in Range</Text>
+      <StackedBarChart
+        data={WEEKLY_DATA.tirTrend}
+        width={Dimensions.get("window").width - 48}
+        height={220}
+        chartConfig={chartConfig()}
+        withHorizontalLabels={false}
+      />
+    </View>
+  </>
+);
+
+const MonthlyView = () => (
+  <>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>월간 혈당 히트맵 (TIR %)</Text>
+      <ContributionGraph
+        values={MONTHLY_DATA.heatmapData}
+        endDate={new Date("2025-08-31")}
+        numDays={31}
+        width={Dimensions.get("window").width - 48}
+        height={220}
+        chartConfig={{
+          ...chartConfig(),
+          color: (opacity = 1) => `rgba(80, 214, 163, ${opacity})`,
+        }}
+      />
+    </View>
+    <View style={styles.card}>
+      <Text style={styles.sectionTitle}>주간별 TIR 트렌드</Text>
+      <LineChart
+        data={{
+          labels: ["1주차", "2주차", "3주차", "4주차"],
+          datasets: [{ data: MONTHLY_DATA.weeklyTrend }],
+        }}
+        width={Dimensions.get("window").width - 48}
+        height={220}
+        fromZero
+        chartConfig={chartConfig(COLORS.inRange)}
+        bezier
+        yAxisSuffix="%"
+      />
+    </View>
+  </>
+);
+
+// --- 메인 컴포넌트 ---
 export default function GlucoseDetailsScreen() {
   const [period, setPeriod] = useState<Period>("일");
-
-  // 임시 데이터
-  const data = {
-    labels: ["00:00", "06:00", "12:00", "18:00", "23:59"],
-    datasets: [
-      {
-        data: Array.from({ length: 40 }, () => 85 + Math.random() * 20),
-        color: (opacity = 1) => `rgba(160, 97, 255, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-  };
-
-  const avg =
-    data.datasets[0].data.reduce((a, b) => a + b, 0) /
-    data.datasets[0].data.length;
-  const min = Math.min(...data.datasets[0].data);
-  const max = Math.max(...data.datasets[0].data);
-
   return (
     <LinearGradient
       colors={[COLORS.background, "#0A0A0A"]}
       style={styles.container}
     >
       <SafeAreaView style={{ flex: 1 }}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Feather name="chevron-left" size={28} color={COLORS.text} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>혈당</Text>
-          <TouchableOpacity>
-            <Feather name="help-circle" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
-
+        <DetailScreenHeader title="혈당 분석" />
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <PeriodToggle period={period} setPeriod={setPeriod} />
-          <Text style={styles.mainValue}>
-            95<Text style={styles.unit}> mg/dL</Text>
-          </Text>
-          <Text style={styles.dateRange}>식후 2시간 기준</Text>
-
-          <View style={styles.chartContainer}>
-            <LineChart
-              data={data}
-              width={Dimensions.get("window").width - 32}
-              height={220}
-              withDots={false}
-              withInnerLines={false}
-              withOuterLines={false}
-              withVerticalLabels={false}
-              chartConfig={{
-                backgroundColor: COLORS.card,
-                backgroundGradientFrom: COLORS.card,
-                backgroundGradientTo: COLORS.card,
-                decimalPlaces: 0,
-                color: (opacity = 1) => `rgba(160, 97, 255, ${opacity})`,
-                labelColor: (opacity = 1) => `rgba(234, 234, 234, ${opacity})`,
-                propsForBackgroundLines: { stroke: COLORS.gridLine },
-              }}
-              bezier
-              style={{ borderRadius: 16 }}
-            />
-          </View>
-
-          <View style={styles.summaryMetricsContainer}>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{avg.toFixed(0)}</Text>
-              <Text style={styles.metricLabel}>평균</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{min.toFixed(0)}</Text>
-              <Text style={styles.metricLabel}>최저</Text>
-            </View>
-            <View style={styles.metricItem}>
-              <Text style={styles.metricValue}>{max.toFixed(0)}</Text>
-              <Text style={styles.metricLabel}>최대</Text>
-            </View>
-          </View>
+          {period === "일" && <DailyView />}
+          {period === "주" && <WeeklyView />}
+          {period === "월" && <MonthlyView />}
         </ScrollView>
       </SafeAreaView>
     </LinearGradient>
   );
 }
 
+// --- 전체 스타일시트 ---
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
@@ -187,39 +270,41 @@ const styles = StyleSheet.create({
   activeToggleButton: { backgroundColor: COLORS.primary },
   toggleText: { color: COLORS.subText, fontSize: 16, fontWeight: "bold" },
   activeToggleText: { color: "white" },
-  mainValue: {
-    fontFamily: "SpaceMono",
-    fontSize: 64,
-    color: "white",
-    textAlign: "center",
-  },
-  unit: { fontSize: 24, color: "#8E8E93" },
-  dateRange: {
-    fontFamily: "SpaceMono",
-    fontSize: 16,
-    color: "#8E8E93",
-    textAlign: "center",
-    marginBottom: 24,
-  },
-  chartContainer: {
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 12,
+    marginBottom: 16,
     alignItems: "center",
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
-    paddingVertical: 16,
-    marginBottom: 24,
   },
-  summaryMetricsContainer: {
-    flexDirection: "row",
-    backgroundColor: COLORS.card,
-    borderRadius: 24,
-    padding: 20,
-  },
-  metricItem: { flex: 1, alignItems: "center" },
-  metricValue: {
-    fontFamily: "SpaceMono",
-    fontSize: 28,
+  sectionTitle: {
     color: "white",
+    fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 16,
+    alignSelf: "flex-start",
+    paddingHorizontal: 12,
   },
-  metricLabel: { color: "#8E8E93", fontSize: 14, marginTop: 4 },
+  chartSubtitle: {
+    color: COLORS.subText,
+    fontSize: 12,
+    marginTop: 8,
+    paddingHorizontal: 12,
+  },
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    padding: 12,
+    marginBottom: 16,
+  },
+  summaryItem: {
+    flex: 1,
+    minWidth: "33%",
+    alignItems: "center",
+    paddingVertical: 16,
+  },
+  summaryValue: { color: "white", fontSize: 24, fontWeight: "bold" },
+  summaryLabel: { color: COLORS.subText, fontSize: 14, marginTop: 4 },
 });
