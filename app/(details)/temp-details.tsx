@@ -130,7 +130,6 @@ const DailyView = () => (
     </View>
   </>
 );
-
 const WeeklyView = () => (
   <>
     <View style={styles.summaryGrid}>
@@ -181,7 +180,6 @@ const WeeklyView = () => (
     </View>
   </>
 );
-
 const MonthlyView = () => (
   <>
     <View style={styles.summaryGrid}>
@@ -214,20 +212,7 @@ const MonthlyView = () => (
           ...chartConfig(),
           color: (opacity = 1) => `rgba(243, 156, 18, ${opacity})`,
         }}
-      />
-    </View>
-    <View style={styles.card}>
-      <Text style={styles.sectionTitle}>주간별 평균 트렌드</Text>
-      <LineChart
-        data={{
-          labels: ["1주차", "2주차", "3주차", "4주차"],
-          datasets: [{ data: MONTHLY_DATA.weeklyTrend }],
-        }}
-        width={Dimensions.get("window").width - 48}
-        height={220}
-        yAxisSuffix="°C"
-        chartConfig={chartConfig()}
-        bezier
+        tooltipDataAttrs={() => ({})} // [수정] 필수 속성 추가
       />
     </View>
   </>

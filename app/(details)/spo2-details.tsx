@@ -183,6 +183,7 @@ const WeeklyView = () => (
         height={220}
         fromZero={false}
         yAxisSuffix="%"
+        yAxisLabel="" // [수정] 필수 속성 추가
         chartConfig={chartConfig()}
       />
     </View>
@@ -203,6 +204,7 @@ const MonthlyView = () => (
           ...chartConfig(),
           color: (opacity = 1) => `rgba(58, 204, 225, ${opacity})`,
         }}
+        tooltipDataAttrs={() => ({})} // [수정] 필수 속성 추가
       />
     </View>
     <View style={styles.card}>
